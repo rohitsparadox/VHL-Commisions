@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contractor Commission Calculator (Offline)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        .input-group .currency-symbol {
+            padding: 0.5rem 0.75rem;
+            background-color: #e5e7eb;
+            border: 1px solid #d1d5db;
+            border-right: 0;
+            border-radius: 0.5rem 0 0 0.5rem;
+            color: #4b5563;
+        }
+        .input-group input {
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        .input-group.suffix .currency-symbol {
+             border-radius: 0 0.5rem 0.5rem 0;
+             border-right: 1px solid #d1d5db;
+             border-left: 0;
+        }
+        .input-group.suffix input {
+            border-radius: 0.5rem 0 0 0.5rem;
+        }
+        /* Modal styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-container {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <header class="text-center mb-8">
+            <!-- Minimalist SVG Logo with Gradient and Abstract Circle -->
+            <svg id="logo-svg" width="60" height="60" viewBox="0 0 100 100" class="mx-auto mb-4">
+                <defs>
+                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#014421;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#013220;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <path d="M 95,50 A 45,45 0 1 1 94.9,49.9" stroke="url(#logoGradient)" stroke-width="7" stroke-dasharray="265 100" fill="none" transform="rotate(-90 50 50)"/>
+                <text x="50" y="65" font-family="Inter, sans-serif" font-size="36" font-weight="bold" fill="url(#logoGradient)" text-anchor="middle">VHL</text>
+            </svg>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Contractor Commission</h1>
+            <p class="text-gray-600 mt-2">Vitality Health Limited</p>
+            <div class="mt-4 flex justify-center space-x-2">
+                <label for="statementMonth" class="sr-only">Statement Month</label>
+                <select id="statementMonth" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition"></select>
+                <label for="statementYear" class="sr-only">Statement Year</label>
+                <select id="statementYear" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition"></select>
+            </div>
+        </header>
+
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                <!-- Left Column: Inputs -->
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Step 1: Contractor Details</h2>
+                         <div>
+                            <label for="providerName" class="block text-sm font-medium text-gray-600 mb-1">Contractor Name</label>
+                            <input type="text" id="providerName" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Step 2: Revenue and rate</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="totalReceipts" class="block text-sm font-medium text-gray-600 mb-1">Total Receipts</label>
+                                <div class="input-group">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="totalReceipts" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="payoutPercentage" class="block text-sm font-medium text-gray-600 mb-1">Commission Rate</label>
+                                <div class="input-group suffix">
+                                    <input type="number" id="payoutPercentage" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                                    <span class="currency-symbol">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Step 3: Deductions</h2>
+                        <!-- Per-Unit Deductions -->
+                        <div class="p-4 bg-gray-50 rounded-lg border mb-4">
+                             <label class="block text-sm font-bold text-gray-700 mb-2">Cerec (Per Unit)</label>
+                             <div class="flex items-center space-x-2">
+                                 <input type="number" id="cerecUnits" class="w-1/2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="Units">
+                                 <span class="text-gray-500">x</span>
+                                 <div class="w-1/2 input-group">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="cerecRate" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="Rate">
+                                 </div>
+                             </div>
+                             <div class="text-right font-semibold mt-2 text-gray-700">
+                                Total: <span id="cerecTotalDisplay" class="text-lg text-gray-900">$0.00</span>
+                             </div>
+                        </div>
+                        <!-- Other Fixed Deductions -->
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Other Fixed Deductions</label>
+                        <div id="deductionsList" class="space-y-3">
+                            <!-- Dynamic deduction rows will be inserted here -->
+                        </div>
+                        <button id="addDeductionBtn" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                            + Add Fixed Deduction
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: Summary -->
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200 flex flex-col">
+                    <h2 class="text-2xl font-bold text-blue-900 mb-4 border-b-2 border-blue-200 pb-2">Calculation Summary</h2>
+                    <div class="space-y-4 flex-grow">
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <p class="text-sm text-gray-500">Total Deductions</p>
+                            <p id="totalDeductions" class="text-2xl font-bold text-red-600">-$0.00</p>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <p class="text-sm text-gray-500">Sub Total (Net Receipts)</p>
+                            <p id="subTotal" class="text-2xl font-bold text-gray-800">$0.00</p>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t-2 border-dashed border-blue-200">
+                            <div class="bg-green-100 border border-green-300 text-green-900 p-4 rounded-lg text-center">
+                                <p class="text-lg font-semibold">Final Commission Amount</p>
+                                <p id="finalAmount" class="text-4xl font-extrabold tracking-tight">$0.00</p>
+                                <p class="text-xs text-green-800 mt-2">(All values are in NZD and GST Inclusive)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 grid grid-cols-2 gap-4">
+                         <button id="saveRecordBtn" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">Save Record</button>
+                         <button id="viewRecordsBtn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">View Records</button>
+                    </div>
+                     <div class="mt-4 grid grid-cols-2 gap-4">
+                         <button id="exportPdfButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">Export to PDF</button>
+                         <button id="resetButton" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">Reset Form</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-8 text-sm text-gray-500">
+            <p>This calculator is for estimation purposes only.</p>
+        </footer>
+    </div>
+    
+    <!-- Records Modal -->
+    <div id="recordsModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col modal-container">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-gray-800">Past Records</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="recordsListContainer" class="p-6 overflow-y-auto">
+                <!-- Records will be dynamically inserted here -->
+            </div>
+            <div class="p-4 border-t border-gray-200 text-right">
+                <button id="downloadRecordsPdfBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                    Download All as PDF
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300">
+        <p>Record saved successfully!</p>
+    </div>
+
+    <script>
+        // --- Global Variables ---
+        const { jsPDF } = window.jspdf;
+        const DB_KEY = 'commissionRecords';
+
+        // --- DOM Element Selection ---
+        const providerNameInput = document.getElementById('providerName');
+        const statementMonthInput = document.getElementById('statementMonth');
+        const statementYearInput = document.getElementById('statementYear');
+        const totalReceiptsInput = document.getElementById('totalReceipts');
+        const payoutPercentageInput = document.getElementById('payoutPercentage');
+        const cerecUnitsInput = document.getElementById('cerecUnits');
+        const cerecRateInput = document.getElementById('cerecRate');
+        const deductionsList = document.getElementById('deductionsList');
+        const addDeductionBtn = document.getElementById('addDeductionBtn');
+        const resetButton = document.getElementById('resetButton');
+        const exportPdfButton = document.getElementById('exportPdfButton');
+        const saveRecordBtn = document.getElementById('saveRecordBtn');
+        const viewRecordsBtn = document.getElementById('viewRecordsBtn');
+        const recordsModal = document.getElementById('recordsModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const recordsListContainer = document.getElementById('recordsListContainer');
+        const downloadRecordsPdfBtn = document.getElementById('downloadRecordsPdfBtn');
+        const toast = document.getElementById('toast');
+
+        const outputs = {
+            cerecTotalDisplay: document.getElementById('cerecTotalDisplay'),
+            totalDeductions: document.getElementById('totalDeductions'),
+            subTotal: document.getElementById('subTotal'),
+            finalAmount: document.getElementById('finalAmount'),
+        };
+        
+        // --- Core Functions ---
+
+        /**
+         * Creates a new HTML element for a fixed deduction row.
+         */
+        function createDeductionRow(description = '', amount = '') {
+            const row = document.createElement('div');
+            row.className = 'flex items-center space-x-2 deduction-row';
+            row.innerHTML = `
+                <input type="text" value="${description}" class="w-2/5 p-2 border border-gray-300 rounded-md deduction-desc focus:ring-2 focus:ring-blue-500" placeholder="Deduction Name">
+                <div class="w-3/5 input-group">
+                    <span class="currency-symbol">$</span>
+                    <input type="number" value="${amount}" class="w-full p-2 border border-gray-300 rounded-md deduction-amount focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                </div>
+                <button type="button" class="remove-deduction-btn bg-red-200 text-red-700 hover:bg-red-300 font-bold p-2 rounded-md transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                </button>
+            `;
+            deductionsList.appendChild(row);
+        }
+
+        /**
+         * Calculates all totals and updates the summary UI.
+         */
+        function calculate() {
+            const totalReceipts = parseFloat(totalReceiptsInput.value) || 0;
+            const payoutPercentage = parseFloat(payoutPercentageInput.value) || 0;
+            const cerecUnits = parseFloat(cerecUnitsInput.value) || 0;
+            const cerecRate = parseFloat(cerecRateInput.value) || 0;
+            const cerecTotal = cerecUnits * cerecRate;
+
+            let fixedDeductionsTotal = 0;
+            document.querySelectorAll('.deduction-amount').forEach(input => {
+                fixedDeductionsTotal += parseFloat(input.value) || 0;
+            });
+
+            const totalDeductions = cerecTotal + fixedDeductionsTotal;
+            const subTotal = totalReceipts - totalDeductions;
+            const finalAmount = subTotal * (payoutPercentage / 100);
+
+            outputs.cerecTotalDisplay.textContent = `$${cerecTotal.toFixed(2)}`;
+            outputs.totalDeductions.textContent = `-$${totalDeductions.toFixed(2)}`;
+            outputs.subTotal.textContent = `$${subTotal.toFixed(2)}`;
+            outputs.finalAmount.textContent = `$${finalAmount.toFixed(2)}`;
+        }
+
+        /**
+         * Resets all fields to be blank, but sets date to current month.
+         */
+        function resetFields() {
+            providerNameInput.value = '';
+            const today = new Date();
+            statementMonthInput.value = today.getMonth();
+            statementYearInput.value = today.getFullYear();
+            totalReceiptsInput.value = '';
+            payoutPercentageInput.value = '';
+            cerecUnitsInput.value = '';
+            cerecRateInput.value = '';
+            deductionsList.innerHTML = '';
+            calculate();
+        }
+        
+        /**
+         * Populates the month and year dropdowns.
+         */
+        function populateDatePickers() {
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            months.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = month;
+                statementMonthInput.appendChild(option);
+            });
+
+            const currentYear = new Date().getFullYear();
+            for (let i = currentYear - 10; i <= currentYear + 10; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                statementYearInput.appendChild(option);
+            }
+        }
+
+        /**
+         * Converts the SVG logo to a PNG data URI for PDF embedding.
+         * @returns {Promise<string>} A promise that resolves with the PNG data URI.
+         */
+        function getLogoPng() {
+            return new Promise((resolve) => {
+                const logoSvgElement = document.getElementById('logo-svg');
+                const svgString = new XMLSerializer().serializeToString(logoSvgElement);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = logoSvgElement.width.baseVal.value * 2;
+                canvas.height = logoSvgElement.height.baseVal.value * 2;
+                const img = new Image();
+                const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+                const url = URL.createObjectURL(svgBlob);
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(url);
+                    const pngDataUri = canvas.toDataURL('image/png');
+                    resolve(pngDataUri);
+                };
+                img.src = url;
+            });
+        }
+
+        /**
+         * Gathers all data from the form and exports it as a PDF document.
+         */
+        async function exportToPDF() {
+            const providerName = providerNameInput.value || "Untitled";
+            
+            const fixedDeductions = [];
+             document.querySelectorAll('.deduction-row').forEach(row => {
+                fixedDeductions.push({
+                    description: row.querySelector('.deduction-desc').value || 'Unnamed Deduction',
+                    amount: parseFloat(row.querySelector('.deduction-amount').value) || 0
+                });
+            });
+
+            const recordData = {
+                providerName,
+                statementMonth: statementMonthInput.value,
+                statementYear: statementYearInput.value,
+                totalReceipts: parseFloat(totalReceiptsInput.value) || 0,
+                payoutPercentage: parseFloat(payoutPercentageInput.value) || 0,
+                cerecUnits: parseFloat(cerecUnitsInput.value) || 0,
+                cerecRate: parseFloat(cerecRateInput.value) || 0,
+                fixedDeductions,
+                finalAmount: parseFloat(outputs.finalAmount.textContent.replace('$', '')) || 0
+            };
+            
+            const doc = await createRecordPdf(recordData);
+            const date = new Date(recordData.statementYear, recordData.statementMonth);
+            const dateString = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+            doc.save(`${providerName}_Commission_${dateString.replace(/, /g, '_')}.pdf`);
+        }
+        
+        /**
+         * Creates a PDF document for a single record.
+         * @param {object} record - The record data to be put into the PDF.
+         * @returns {Promise<jsPDF>} A promise that resolves with the jsPDF document object.
+         */
+        async function createRecordPdf(record) {
+             const pngDataUri = await getLogoPng();
+             const doc = new jsPDF();
+             let y = 15;
+
+             let dateString = "Not specified";
+             if (record.statementYear && record.statementMonth) {
+                 const date = new Date(record.statementYear, record.statementMonth);
+                 dateString = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+             }
+
+             doc.addImage(pngDataUri, 'PNG', 95, y, 20, 20);
+             y += 30;
+             doc.setFontSize(22);
+             doc.setFont("helvetica", "bold");
+             doc.text("Contractor Commission Statement", 105, y, { align: 'center' });
+             y += 8;
+             doc.setFontSize(14);
+             doc.setFont("helvetica", "normal");
+             doc.text("Vitality Health Limited", 105, y, { align: 'center' });
+             y += 8;
+             doc.setFontSize(12);
+             doc.text(dateString, 105, y, { align: 'center' });
+             y += 10;
+             doc.text(`Contractor: ${record.providerName}`, 15, y);
+             y += 10;
+             doc.setLineWidth(0.5);
+             doc.line(15, y, 195, y);
+             y += 10;
+             doc.setFontSize(16);
+             doc.setFont("helvetica", "bold");
+             doc.text("Revenue and Commission Rate", 15, y);
+             y += 8;
+             doc.setFontSize(12);
+             doc.setFont("helvetica", "normal");
+             doc.text(`Total Receipts:`, 15, y);
+             doc.text(`$${record.totalReceipts.toFixed(2)}`, 195, y, { align: 'right'});
+             y += 7;
+             doc.text(`Commission Rate:`, 15, y);
+             doc.text(`${record.payoutPercentage}%`, 195, y, { align: 'right'});
+             y += 10;
+             doc.setFontSize(16);
+             doc.setFont("helvetica", "bold");
+             doc.text("Deductions", 15, y);
+             y += 8;
+             doc.setFontSize(12);
+             doc.setFont("helvetica", "normal");
+             const cerecTotal = (record.cerecUnits || 0) * (record.cerecRate || 0);
+             doc.text(`Cerec (${record.cerecUnits || 0} units @ $${record.cerecRate || 0}/unit):`, 15, y);
+             doc.text(`$${cerecTotal.toFixed(2)}`, 195, y, { align: 'right'});
+             y += 7;
+             if (record.fixedDeductions) {
+                 record.fixedDeductions.forEach(d => {
+                     doc.text(`${d.description}:`, 15, y);
+                     doc.text(`$${d.amount.toFixed(2)}`, 195, y, { align: 'right'});
+                     y += 7;
+                 });
+             }
+             y += 3;
+             doc.setLineWidth(0.2);
+             doc.line(15, y, 195, y);
+             y += 7;
+             doc.setFont("helvetica", "bold");
+             const totalDeductions = cerecTotal + (record.fixedDeductions || []).reduce((acc, curr) => acc + curr.amount, 0);
+             const subTotal = record.totalReceipts - totalDeductions;
+             doc.text(`Total Deductions:`, 15, y);
+             doc.text(`-$${totalDeductions.toFixed(2)}`, 195, y, { align: 'right'});
+             y += 10;
+             doc.setLineWidth(0.5);
+             doc.line(15, y, 195, y);
+             y += 10;
+             doc.text(`Net Receipts (Sub Total):`, 15, y);
+             doc.text(`$${subTotal.toFixed(2)}`, 195, y, { align: 'right'});
+             y += 10;
+             doc.setFontSize(16);
+             doc.setFont("helvetica", "bold");
+             doc.text(`Final Commission Amount:`, 15, y);
+             doc.text(`$${record.finalAmount.toFixed(2)}`, 195, y, { align: 'right'});
+             y += 5;
+             doc.setFontSize(9);
+             doc.setFont("helvetica", "italic");
+             doc.text("(All values are in NZD and GST Inclusive)", 195, y, { align: 'right'});
+             return doc;
+        }
+        
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-20');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-20');
+            }, 3000);
+        }
+
+        function saveRecord() {
+            const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            
+            const fixedDeductions = [];
+            document.querySelectorAll('.deduction-row').forEach(row => {
+                const desc = row.querySelector('.deduction-desc').value;
+                const amount = row.querySelector('.deduction-amount').value;
+                if (desc && amount) {
+                    fixedDeductions.push({ description: desc, amount: parseFloat(amount) });
+                }
+            });
+
+            const record = {
+                id: crypto.randomUUID(), // Unique ID for each record
+                providerName: providerNameInput.value,
+                statementMonth: statementMonthInput.value,
+                statementYear: statementYearInput.value,
+                totalReceipts: parseFloat(totalReceiptsInput.value) || 0,
+                payoutPercentage: parseFloat(payoutPercentageInput.value) || 0,
+                cerecUnits: parseFloat(cerecUnitsInput.value) || 0,
+                cerecRate: parseFloat(cerecRateInput.value) || 0,
+                fixedDeductions: fixedDeductions,
+                finalAmount: parseFloat(outputs.finalAmount.textContent.replace('$', '')) || 0,
+                createdAt: new Date().toISOString()
+            };
+
+            records.push(record);
+            localStorage.setItem(DB_KEY, JSON.stringify(records));
+            showToast("Record saved successfully!");
+        }
+        
+        function renderRecords() {
+             const records = (JSON.parse(localStorage.getItem(DB_KEY)) || []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+             window.records = records; // Store for easy access by other functions
+
+             recordsListContainer.innerHTML = '';
+             if (records.length === 0) {
+                recordsListContainer.innerHTML = `<p class="text-center text-gray-500">No saved records found.</p>`;
+                return;
+             }
+             
+             const table = document.createElement('table');
+             table.className = 'w-full text-left table-auto';
+             table.innerHTML = `
+                <thead>
+                    <tr class="border-b">
+                        <th class="p-2">Date</th>
+                        <th class="p-2">Contractor</th>
+                        <th class="p-2 text-right">Commission</th>
+                        <th class="p-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+             `;
+             const tbody = table.querySelector('tbody');
+             records.forEach(record => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100';
+                
+                let dateString = "N/A";
+                if (record.statementYear && record.statementMonth) {
+                    const date = new Date(record.statementYear, record.statementMonth);
+                    dateString = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+                }
+
+                tr.innerHTML = `
+                    <td class="p-2">${dateString}</td>
+                    <td class="p-2">${record.providerName}</td>
+                    <td class="p-2 text-right">$${record.finalAmount.toFixed(2)}</td>
+                    <td class="p-2 text-center space-x-2">
+                        <button class="load-record-btn bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold py-1 px-2 rounded-full" data-id="${record.id}">Load</button>
+                        <button class="download-record-btn bg-green-100 text-green-700 hover:bg-green-200 text-xs font-bold py-1 px-2 rounded-full" data-id="${record.id}">PDF</button>
+                        <button class="delete-record-btn bg-red-100 text-red-700 hover:bg-red-200 text-xs font-bold py-1 px-2 rounded-full" data-id="${record.id}">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+             });
+             recordsListContainer.appendChild(table);
+        }
+        
+        function loadRecord(recordId) {
+            const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            const record = records.find(r => r.id === recordId);
+            if (!record) return;
+
+            providerNameInput.value = record.providerName || '';
+            statementMonthInput.value = record.statementMonth || '';
+            statementYearInput.value = record.statementYear || '';
+            totalReceiptsInput.value = record.totalReceipts || '';
+            payoutPercentageInput.value = record.payoutPercentage || '';
+            cerecUnitsInput.value = record.cerecUnits || '';
+            cerecRateInput.value = record.cerecRate || '';
+            
+            deductionsList.innerHTML = '';
+            if(record.fixedDeductions) {
+                record.fixedDeductions.forEach(d => createDeductionRow(d.description, d.amount));
+            }
+            
+            calculate();
+            toggleModal(false);
+            showToast("Record loaded.");
+        }
+        
+        function deleteRecord(id) {
+            const customModal = document.createElement('div');
+            customModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50';
+            customModal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                    <h3 class="text-lg font-bold mb-4">Confirm Deletion</h3>
+                    <p class="text-gray-600 mb-6">Are you sure you want to delete this record? This action cannot be undone.</p>
+                    <div class="flex justify-end space-x-4">
+                        <button id="confirm-cancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                        <button id="confirm-delete" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Delete</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(customModal);
+
+            document.getElementById('confirm-delete').onclick = () => {
+                let records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem(DB_KEY, JSON.stringify(records));
+                renderRecords();
+                showToast("Record deleted.");
+                document.body.removeChild(customModal);
+            };
+
+            document.getElementById('confirm-cancel').onclick = () => {
+                document.body.removeChild(customModal);
+            };
+        }
+
+        function toggleModal(show) {
+            if (show) {
+                renderRecords();
+                recordsModal.classList.remove('hidden');
+            } else {
+                recordsModal.classList.add('hidden');
+            }
+        }
+        
+        async function downloadAllRecordsAsPDF() {
+            const records = window.records || [];
+            if (records.length === 0) {
+                showToast("No records to download.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            const pageHeight = doc.internal.pageSize.height;
+            let y = 15;
+            const pngDataUri = await getLogoPng();
+
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("All Commission Records", 105, y, { align: 'center' });
+            y += 15;
+
+            for (const record of records) {
+                const recordHeight = 85 + ((record.fixedDeductions || []).length * 7);
+                if (y + recordHeight > pageHeight - 20) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                doc.setLineWidth(0.5);
+                doc.line(15, y, 195, y);
+                y += 10;
+
+                let dateString = "Not specified";
+                if (record.statementYear && record.statementMonth) {
+                    const date = new Date(record.statementYear, record.statementMonth);
+                    dateString = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                }
+
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${record.providerName} - ${dateString}`, 15, y);
+                y += 10;
+
+                doc.setFontSize(11);
+                doc.setFont("helvetica", "normal");
+                
+                doc.text(`Total Receipts: $${record.totalReceipts.toFixed(2)}`, 15, y);
+                doc.text(`Commission Rate: ${record.payoutPercentage}%`, 105, y);
+                y += 7;
+
+                const cerecTotal = (record.cerecUnits || 0) * (record.cerecRate || 0);
+                doc.text(`Cerec: $${cerecTotal.toFixed(2)}`, 15, y);
+                y += 7;
+
+                if(record.fixedDeductions && record.fixedDeductions.length > 0) {
+                    record.fixedDeductions.forEach(d => {
+                        doc.text(`${d.description}: $${d.amount.toFixed(2)}`, 15, y);
+                        y += 7;
+                    });
+                }
+                
+                doc.setFont("helvetica", "bold");
+                const totalDeductions = cerecTotal + (record.fixedDeductions || []).reduce((acc, curr) => acc + curr.amount, 0);
+                const subTotal = record.totalReceipts - totalDeductions;
+
+                doc.text(`Total Deductions: -$${totalDeductions.toFixed(2)}`, 15, y);
+                y += 7;
+                doc.text(`Sub Total: $${subTotal.toFixed(2)}`, 15, y);
+                y += 10;
+                
+                doc.setFontSize(12);
+                doc.text(`Final Commission: $${record.finalAmount.toFixed(2)}`, 15, y);
+                y += 10;
+            }
+            
+            doc.save("All_Commission_Records.pdf");
+        }
+
+
+        // --- Event Listeners ---
+        document.querySelector('.container').addEventListener('input', (e) => {
+            if (e.target.matches('input, select')) {
+                calculate();
+            }
+        });
+        
+        deductionsList.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-deduction-btn')) {
+                e.target.closest('.deduction-row').remove();
+                calculate();
+            }
+        });
+
+        addDeductionBtn.addEventListener('click', () => createDeductionRow());
+        resetButton.addEventListener('click', resetFields);
+        exportPdfButton.addEventListener('click', exportToPDF);
+        saveRecordBtn.addEventListener('click', saveRecord);
+        viewRecordsBtn.addEventListener('click', () => toggleModal(true));
+        closeModalBtn.addEventListener('click', () => toggleModal(false));
+        downloadRecordsPdfBtn.addEventListener('click', downloadAllRecordsAsPDF);
+
+        recordsModal.addEventListener('click', e => {
+            if (e.target === recordsModal) toggleModal(false);
+        });
+        
+        recordsListContainer.addEventListener('click', async e => {
+             if (e.target.classList.contains('load-record-btn')) {
+                const recordId = e.target.dataset.id;
+                loadRecord(recordId);
+            }
+            if (e.target.classList.contains('delete-record-btn')) {
+                const recordId = e.target.dataset.id;
+                deleteRecord(recordId);
+            }
+            if (e.target.classList.contains('download-record-btn')) {
+                const recordId = e.target.dataset.id;
+                const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+                const recordData = records.find(r => r.id === recordId);
+                if (recordData) {
+                    const doc = await createRecordPdf(recordData);
+                    let dateString = "record";
+                     if (recordData.statementYear && recordData.statementMonth) {
+                        const date = new Date(recordData.statementYear, recordData.statementMonth);
+                        dateString = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    }
+                    doc.save(`${recordData.providerName}_Commission_${dateString.replace(/, /g, '_')}.pdf`);
+                }
+            }
+        });
+        
+        // --- Initial Page Load ---
+        window.addEventListener('load', () => {
+            populateDatePickers();
+            resetFields(); 
+        });
+    </script>
+
+</body>
+</html>
